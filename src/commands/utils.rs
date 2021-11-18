@@ -1,8 +1,3 @@
-/// Escreve uma mensagem de erro estilizada na saída padrão.
-pub fn print_error(msg: &str) {
-    eprintln!("Erro: {}. Tente `backy help` para mais informações.", msg);
-}
-
 const HELP_MSG: &'static str = "\
 Backy auxilia na manutenção de backups locais e remotos usando as ferramentas rclone e rsync.
 

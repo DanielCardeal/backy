@@ -1,4 +1,5 @@
 mod utils;
+use crate::error::BackyError;
 
 /// Comandos (ou modos de operação) que o programa pode ser executado.
 pub enum Command {
@@ -8,22 +9,20 @@ pub enum Command {
     Help,
     /// Atualiza os arquivos monitorados para a versão mais recenete.
     Update,
-    /// Acaba a execução do programa com uma mensagem de erro.
-    Exit(&'static str),
 }
 
 impl Command {
     /// Cria e devolve o comando correspondente à lista argumentos
-    pub fn from_args(args: &[String]) -> Self {
+    pub fn from_args(args: &[String]) -> Result<Self, BackyError> {
         if args.len() <= 1 {
-            return Command::Exit("Número insuficiente de argumentos");
+            return Err(BackyError::NoCommand);
         }
-        return match args[1].as_str() {
-            "help" => Command::Help,
-            "clean" => Command::Clean,
-            "update" => Command::Update,
-            _ => Command::Exit("Este comando não existe"),
-        };
+        match args[1].as_str() {
+            "help" => Ok(Command::Help),
+            "clean" => Ok(Command::Clean),
+            "update" => Ok(Command::Update),
+            cmd => Err(BackyError::BadCommand(cmd.to_string())),
+        }
     }
 
     /// Executa este comando
@@ -32,7 +31,6 @@ impl Command {
             Command::Clean => println!("Chamando clean!"),
             Command::Update => println!("Chamando update!"),
             Command::Help => utils::print_help(),
-            Command::Exit(msg) => utils::print_error(msg),
         }
     }
 }
