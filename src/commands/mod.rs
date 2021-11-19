@@ -35,15 +35,15 @@ impl Command {
 }
 
 const HELP_MSG: &'static str = "\
-Backy auxilia na manutenção de backups locais e remotos usando as ferramentas rclone e rsync.
+Backy helps users to manage local and remote backups using the rclone and rsync tools.
 
-USO:
-    backy [COMANDO]
+USAGE:
+    backy [COMMAND]
 
-Onde COMANDO pode ser:
-    help      Escreve essa mensagem de ajuda
-    update    Atualiza os arquivos monitorados para versão mais recente.
-    clean     Remove os backups antigos.";
+where COMMAND is one of:
+    help      Write this help message.
+    update    Update backup files to most recent version.
+    clean     Remove old backups.";
 
 pub fn print_help() {
     println!("{}", HELP_MSG);
