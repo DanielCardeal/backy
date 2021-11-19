@@ -14,17 +14,19 @@ pub enum BackyError {
     BadConfigFormat(toml::de::Error),
 }
 
-impl BackyError{
+impl BackyError {
     fn get_err_msg(&self) -> String {
         match self {
-            BackyError::NoCommand => "sem comandos para executar".to_string(),
-            BackyError::BadCommand(cmd) => format!("o comando '{}' não existe", cmd),
-            BackyError::NoConfig => "não foi possível abrir o arquivo de configuração".to_string(),
-            BackyError::NoConfigDir => {
-                "não foi possível abrir o diretório de configuração".to_string()
+            BackyError::NoCommand => {
+                "no command to execute. Try `backy help` for aditional information.".to_string()
             }
+            BackyError::BadCommand(cmd) => format!("command '{}' doesn't exist", cmd),
+            BackyError::NoConfig => {
+                "unable to open the configuration file (maybe the file doesn't exist?)".to_string()
+            }
+            BackyError::NoConfigDir => "unable to open the configuration directory".to_string(),
             BackyError::BadConfigFormat(err) => {
-                format!("o arquivo de configuração contém o seguinte erro:\n{}", err).to_string()
+                format!("unable to parse config:\n{}", err).to_string()
             }
         }
     }
@@ -33,6 +35,6 @@ impl BackyError{
 impl fmt::Display for BackyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let msg = self.get_err_msg();
-        write!(f, "Erro: {}. Tente `backy help` para mais informações.", msg)
+        write!(f, "Error: {}.", msg)
     }
 }
