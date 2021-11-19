@@ -6,6 +6,12 @@ pub enum BackyError {
     NoCommand,
     /// O comando passado não existe
     BadCommand(String),
+    /// Não foi possível abrir o arquivo de configuração
+    NoConfig,
+    /// Não foi possível encontrar o diretório de configuração
+    NoConfigDir,
+    /// O arquivo de configuração contém erros de formatação ou typos
+    BadConfigFormat(toml::de::Error),
 }
 
 impl BackyError{
@@ -13,6 +19,13 @@ impl BackyError{
         match self {
             BackyError::NoCommand => "sem comandos para executar".to_string(),
             BackyError::BadCommand(cmd) => format!("o comando '{}' não existe", cmd),
+            BackyError::NoConfig => "não foi possível abrir o arquivo de configuração".to_string(),
+            BackyError::NoConfigDir => {
+                "não foi possível abrir o diretório de configuração".to_string()
+            }
+            BackyError::BadConfigFormat(err) => {
+                format!("o arquivo de configuração contém o seguinte erro:\n{}", err).to_string()
+            }
         }
     }
 }
