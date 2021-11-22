@@ -1,4 +1,5 @@
 use core::fmt;
+use std::io;
 
 /// Erros que podem ocorrer durante a execução do programa
 pub enum BackyError {
@@ -6,12 +7,20 @@ pub enum BackyError {
     NoCommand,
     /// O comando passado não existe
     BadCommand(String),
+
     /// Não foi possível abrir o arquivo de configuração
     NoConfig,
     /// Não foi possível encontrar o diretório de configuração
     NoConfigDir,
     /// O arquivo de configuração contém erros de formatação ou typos
     BadConfigFormat(toml::de::Error),
+
+    /// Não foi possível criar o diretório de backup
+    NoArchiveDir(io::Error),
+    /// Alguns dos arquivos de backup não existem no sistema
+    BadFiles(Vec<String>),
+    /// Não foi possível criar o link simbólico nos archives
+    SymCreationFailed(io::Error),
 }
 
 impl BackyError {
@@ -27,6 +36,20 @@ impl BackyError {
             BackyError::NoConfigDir => "unable to open the configuration directory".to_string(),
             BackyError::BadConfigFormat(err) => {
                 format!("unable to parse config:\n{}", err).to_string()
+            }
+            BackyError::NoArchiveDir(err) => {
+                format!("unable to create backup dir:\n{}", err)
+            }
+            BackyError::BadFiles(files) => {
+                let mut msg = String::from("unable to find the following files:");
+                for file in files {
+                    msg.push('\n');
+                    msg.push_str(file);
+                }
+                msg
+            }
+            BackyError::SymCreationFailed(err) => {
+                format!("unable to create `latest` symlink:\n{}", err)
             }
         }
     }

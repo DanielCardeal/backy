@@ -8,9 +8,9 @@ use std::{env, process::exit};
 
 fn run_app() -> Result<(), BackyError> {
     let args: Vec<String> = env::args().collect();
-    let _config = config::load()?;
+    let config = config::load()?;
     let command = Command::from_args(&args)?;
-    command.execute();
+    command.execute(config)?;
     Ok(())
 }
 
