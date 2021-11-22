@@ -1,5 +1,16 @@
 use crate::error::BackyError;
 
+const HELP_MSG: &'static str = "\
+Backy helps users to manage local and remote backups using the rclone and rsync tools.
+
+USAGE:
+    backy [COMMAND]
+
+where COMMAND is one of:
+    help      Write this help message.
+    update    Update backup files to most recent version.
+    clean     Remove old backups.";
+
 /// Comandos (ou modos de operação) que o programa pode ser executado.
 pub enum Command {
     /// Remove backups antigos.
@@ -33,17 +44,6 @@ impl Command {
         }
     }
 }
-
-const HELP_MSG: &'static str = "\
-Backy helps users to manage local and remote backups using the rclone and rsync tools.
-
-USAGE:
-    backy [COMMAND]
-
-where COMMAND is one of:
-    help      Write this help message.
-    update    Update backup files to most recent version.
-    clean     Remove old backups.";
 
 pub fn print_help() {
     println!("{}", HELP_MSG);
