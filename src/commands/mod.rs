@@ -45,6 +45,6 @@ impl Command {
     }
 }
 
-pub fn print_help() {
+fn print_help() {
     println!("{}", HELP_MSG);
 }
