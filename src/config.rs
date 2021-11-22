@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     /// Lista dos arquivos que devem ser armazenados pelo backup.
-    files: Vec<String>,
+    pub files: Vec<String>,
     /// Local do disco onde devem ser armazenados os backups incrementais.
-    archive_path: String,
+    pub archive_path: String,
 }
 
 pub fn load() -> Result<Config, BackyError> {
