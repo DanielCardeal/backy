@@ -82,14 +82,22 @@ fn update_archive(config: Config) -> Result<(), BackyError> {
     let latest_link = format!("{}/latest", &config.archive_path);
     let latest_arg = format!("--link-dest={}", latest_link);
 
-    // Faz o backup de cada um dos arquivos
-    for file in &config.files {
-        println!("backing up '{}'...", file);
-        let _rsync_status = process::Command::new("rsync")
-            .current_dir(&backup_dir)
-            .args(["-az", "--delete", file, &latest_arg, "."])
-            .status()
-            .unwrap();
+    // Faz o backup (assíncrono) de cada um dos arquivos
+    let mut handles = vec![];
+    for file in config.files {
+        let backup_dir = backup_dir.clone();
+        let latest_arg = latest_arg.clone();
+        handles.push(thread::spawn(move || {
+            println!("backing up '{}'...", file);
+            let _rsync_status = process::Command::new("rsync")
+                .current_dir(backup_dir)
+                .args(["-az", "--delete", &file, &latest_arg, "."])
+                .status()
+                .unwrap();
+        }));
+    }
+    for handle in handles {
+        handle.join().unwrap();
     }
 
     // Recria o link simbólico para latest
