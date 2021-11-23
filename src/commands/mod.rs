@@ -6,6 +6,7 @@ use std::{
     fs,
     os::unix::fs::symlink,
     path::{Path, PathBuf},
+    thread,
 };
 
 const HELP_MSG: &'static str = "\
@@ -119,9 +120,9 @@ fn clean_archive(config: Config) -> Result<(), BackyError> {
     .collect();
 
     let num_backups = backup_list.len();
-    let backups_to_remove: Vec<&DirEntry> = backup_list
-        .iter()
-        .filter(|&backup| {
+    let backups_to_remove: Vec<DirEntry> = backup_list
+        .into_iter()
+        .filter(|backup| {
             let today = Utc::today().naive_utc();
             // NOTE: seguro, já que testamos que podemos fazer a conversão no
             // filter de backup_list
@@ -132,11 +133,16 @@ fn clean_archive(config: Config) -> Result<(), BackyError> {
         .collect();
 
     // Impede (por segurança) que o programa remova todos os backups
-    // TODO paralelizar
     if num_backups - backups_to_remove.len() >= 1 {
+        let mut handles = vec![];
         for backup in backups_to_remove {
-            println!("Removing backup '{}'", backup.file_name().to_str().unwrap());
-            fs::remove_dir_all(backup.path()).unwrap();
+            handles.push(thread::spawn(move || {
+                println!("Removing backup '{}'", backup.file_name().to_str().unwrap());
+                fs::remove_dir_all(backup.path()).unwrap();
+            }));
+        }
+        for handle in handles {
+            handle.join().unwrap();
         }
     }
     return Ok(());
