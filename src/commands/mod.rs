@@ -1,6 +1,6 @@
 use crate::{config::Config, error::BackyError};
 use chrono::Utc;
-use std::process;
+use std::process::{self, Stdio};
 use std::{
     fs,
     os::unix::fs::symlink,
@@ -65,7 +65,10 @@ fn print_help() -> Result<(), BackyError> {
 
 /// Cria um novo snapshot do sistema na pasta de archive
 fn update_archive(config: Config) -> Result<(), BackyError> {
-    // TODO: checar se rsync está instalado no sistema
+    if !user_has_rsync() {
+        return Err(BackyError::NoRsync);
+    }
+
     // Checa se todos os arquivos que devem ser armazenados existem
     let inexistent_files = inexistent_files(&config.files);
     if inexistent_files.len() > 0 {
@@ -118,4 +121,13 @@ fn create_backup_dir(archive_path: &str) -> Result<PathBuf, BackyError> {
         Err(err) => Err(BackyError::NoArchiveDir(err)),
         _ => Ok(backup_dir),
     }
+}
+
+/// Checa se o usuário tem o programa `rsync` instalado
+fn user_has_rsync() -> bool {
+    process::Command::new("rsync")
+        .arg("--version")
+        .stdout(Stdio::null())
+        .status()
+        .is_ok()
 }
