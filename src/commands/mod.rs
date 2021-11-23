@@ -1,5 +1,6 @@
 use crate::{config::Config, error::BackyError};
-use chrono::Utc;
+use chrono::{NaiveDate, Utc};
+use std::fs::DirEntry;
 use std::process::{self, Stdio};
 use std::{
     fs,
@@ -46,7 +47,7 @@ impl Command {
     pub fn execute(self, config: Config) -> Result<(), BackyError> {
         // TODO: reorganizar essa função quando tiver o restante dos comandos
         match self {
-            Command::Clean => Ok(()),
+            Command::Clean => clean_archive(config),
             Command::Update => update_archive(config),
             Command::Help => print_help(),
         }
@@ -97,6 +98,48 @@ fn update_archive(config: Config) -> Result<(), BackyError> {
     };
 
     Ok(())
+}
+
+/// Deleta da memória os arquivos com mais de `config.remove_older_than` dias.
+fn clean_archive(config: Config) -> Result<(), BackyError> {
+    println!(
+        "Removing backups older than {} days.",
+        config.remove_older_than
+    );
+    let backup_dir = PathBuf::from(&config.archive_path);
+    let backup_list: Vec<DirEntry> = match fs::read_dir(backup_dir) {
+        Ok(list) => list,
+        Err(err) => return Err(BackyError::NoArchiveDir(err)),
+    }
+    .map(|backup| backup.unwrap())
+    .filter(|backup| {
+        // Ignora arquivos que não são backups
+        NaiveDate::parse_from_str(backup.file_name().to_str().unwrap(), "%Y%m%d").is_ok()
+    })
+    .collect();
+
+    let num_backups = backup_list.len();
+    let backups_to_remove: Vec<&DirEntry> = backup_list
+        .iter()
+        .filter(|&backup| {
+            let today = Utc::today().naive_utc();
+            // NOTE: seguro, já que testamos que podemos fazer a conversão no
+            // filter de backup_list
+            let backup_date =
+                NaiveDate::parse_from_str(backup.file_name().to_str().unwrap(), "%Y%m%d").unwrap();
+            (today - backup_date).num_days() >= config.remove_older_than
+        })
+        .collect();
+
+    // Impede (por segurança) que o programa remova todos os backups
+    // TODO paralelizar
+    if num_backups - backups_to_remove.len() >= 1 {
+        for backup in backups_to_remove {
+            println!("Removing backup '{}'", backup.file_name().to_str().unwrap());
+            fs::remove_dir_all(backup.path()).unwrap();
+        }
+    }
+    return Ok(());
 }
 
 // #######################

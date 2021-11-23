@@ -10,6 +10,8 @@ pub struct Config {
     pub files: Vec<String>,
     /// Local do disco onde devem ser armazenados os backups incrementais.
     pub archive_path: String,
+    /// Número máximo de dias que um backup deve armazenado pelo programa.
+    pub remove_older_than: i64,
 }
 
 pub fn load() -> Result<Config, BackyError> {
