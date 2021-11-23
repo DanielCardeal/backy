@@ -6,5 +6,7 @@ Esse projeto surgiu da necessidade pessoal de melhorar o meu _workflow_ de backu
 
 - Unificação de código e configuração, o que poluía o histórico do git e também exigia mais esforço mental para mudar algo simples como quais os arquivos que deveriam estar no backup. 
 
+- Dificuldade de paralelizar as chamadas de rsync e rclone, dada a pouca segurança do /multithreading/ em bash.
+
 Esses e muitos outros problemas me fizeram repensar na estratégia como um todo e, finalmente, decidi reescrever o projeto em [Rust](rust-lang.org).
 
