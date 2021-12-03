@@ -54,9 +54,7 @@ impl BackyError {
             BackyError::SymCreationFailed(err) => {
                 format!("unable to create `latest` symlink:\n{}", err)
             }
-            BackyError::NoRsync => {
-                "unable to find `rsync` executable".to_string()
-            }
+            BackyError::NoRsync => "unable to find `rsync` executable".to_string(),
         }
     }
 }

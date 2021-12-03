@@ -26,7 +26,7 @@ pub enum Command {
     Clean,
     /// Escreve a mensagem de ajuda.
     Help,
-    /// Atualiza os arquivos monitorados para a versão mais recenete.
+    /// Atualiza os arquivos monitorados para a versão mais recente.
     Update,
 }
 
