@@ -21,9 +21,17 @@ pub enum BackyError {
     BadFiles(Vec<String>),
     /// Não foi possível criar o link simbólico nos archives
     SymCreationFailed(io::Error),
+    /// Não foi possível criar o arquivo compactado do backup
+    CompressionFailed,
+    /// O rclone_remote não pode ser acessado
+    BadRemote(String),
+    /// Houve uma falha ao enviar os arquivos para o remote
+    RemoteSendFail,
 
     /// Não foi possível encontrar o comando rsync no PATH do usuário
     NoRsync,
+    /// Não foi possível encontrar o comando rclone no PATH do usuário
+    NoRclone,
 }
 
 impl BackyError {
@@ -54,7 +62,18 @@ impl BackyError {
             BackyError::SymCreationFailed(err) => {
                 format!("unable to create `latest` symlink:\n{}", err)
             }
+            BackyError::CompressionFailed => {
+                "unable to compress backup files using `tar`".to_string()
+            }
+            BackyError::BadRemote(remote) => {
+                format!("unable to connect to rclone remote `{}`.", remote)
+            }
+            BackyError::RemoteSendFail => {
+                "unable to send the compressed backup to the remote archive"
+                    .to_string()
+            }
             BackyError::NoRsync => "unable to find `rsync` executable".to_string(),
+            BackyError::NoRclone => "unable to find `rclone` executable".to_string(),
         }
     }
 }

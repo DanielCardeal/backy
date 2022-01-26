@@ -1,5 +1,5 @@
 use crate::{config::Config, error::BackyError};
-use chrono::{NaiveDate, Utc};
+use chrono::{Datelike, NaiveDate, Utc};
 use std::fs::DirEntry;
 use std::process::{self, Stdio};
 use std::{
@@ -8,6 +8,7 @@ use std::{
     path::{Path, PathBuf},
     thread,
 };
+use tempfile::tempdir;
 
 const HELP_MSG: &'static str = "\
 Backy helps users to manage local and remote backups using the rclone and rsync tools.
@@ -18,6 +19,7 @@ USAGE:
 where COMMAND is one of:
     help      Write this help message.
     update    Update backup files to most recent version.
+    remote    Update remote drive with most recent backup version.
     clean     Remove old backups.";
 
 /// Comandos (ou modos de operação) que o programa pode ser executado.
@@ -28,6 +30,8 @@ pub enum Command {
     Help,
     /// Atualiza os arquivos monitorados para a versão mais recente.
     Update,
+    /// Atualiza o drive remoto com a versão mais recente dos backups.
+    Remote,
 }
 
 impl Command {
@@ -40,6 +44,7 @@ impl Command {
             "help" => Ok(Command::Help),
             "clean" => Ok(Command::Clean),
             "update" => Ok(Command::Update),
+            "remote" => Ok(Command::Remote),
             cmd => Err(BackyError::BadCommand(cmd.to_string())),
         }
     }
@@ -51,6 +56,7 @@ impl Command {
             Command::Clean => clean_archive(config),
             Command::Update => update_archive(config),
             Command::Help => print_help(),
+            Command::Remote => update_remote(config),
         }
     }
 }
@@ -105,6 +111,53 @@ fn update_archive(config: Config) -> Result<(), BackyError> {
     if let Err(err) = symlink(&backup_dir, &latest_link) {
         return Err(BackyError::SymCreationFailed(err));
     };
+
+    Ok(())
+}
+
+/// Atualiza o drive externo com a versão atual do backup
+fn update_remote(config: Config) -> Result<(), BackyError> {
+    // TODO: Checar se remote tem nome com formatação adequada
+    if !user_has_rclone() {
+        return Err(BackyError::NoRclone);
+    }
+
+    // Testa conexão com o remote do usuário
+    if process::Command::new("rclone")
+        .stderr(Stdio::null())
+        .current_dir(&config.archive_path)
+        .args(["sync", "--dry-run", "latest/", &config.rclone_remote])
+        .status()
+        .is_err() {
+            return Err(BackyError::BadRemote(config.rclone_remote));
+        }
+
+    // Comprime o backup
+    let today = Utc::today();
+    let backup_file_name = format!("backy_{}-{}-{}.tar.gz", &today.year(), &today.month(), &today.day());
+    let temporary_dir = tempdir().unwrap();
+    let compressed_filepath = temporary_dir.path().join(backup_file_name);
+    if process::Command::new("tar")
+        .current_dir(&config.archive_path)
+        .stdout(Stdio::null())
+        .arg("-vczpf")
+        .arg(&compressed_filepath)
+        .arg("./")
+        .status()
+        .is_err() {
+            return Err(BackyError::CompressionFailed);
+        }
+
+    // Sincroniza o backup com o remote
+    if process::Command::new("rclone")
+        .arg("sync")
+        .arg("--progress")
+        .arg(&compressed_filepath)
+        .arg(&config.rclone_remote)
+        .status()
+        .is_err() {
+            return Err(BackyError::RemoteSendFail);
+        }
 
     Ok(())
 }
@@ -183,6 +236,15 @@ fn create_backup_dir(archive_path: &str) -> Result<PathBuf, BackyError> {
 /// Checa se o usuário tem o programa `rsync` instalado
 fn user_has_rsync() -> bool {
     process::Command::new("rsync")
+        .arg("--version")
+        .stdout(Stdio::null())
+        .status()
+        .is_ok()
+}
+
+/// Checa se o usuário tem o programa `rclone` instalado
+fn user_has_rclone() -> bool {
+    process::Command::new("rclone")
         .arg("--version")
         .stdout(Stdio::null())
         .status()
