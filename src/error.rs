@@ -14,6 +14,8 @@ pub enum BackyError {
     NoConfigDir,
     /// O arquivo de configuração contém erros de formatação ou typos
     BadConfigFormat(toml::de::Error),
+    /// O remote passado pelo usuário não é um remote válido do rclone.
+    BadRemoteName,
 
     /// Não foi possível criar o diretório de backup
     NoArchiveDir(io::Error),
@@ -47,6 +49,9 @@ impl BackyError {
             BackyError::NoConfigDir => "unable to open the configuration directory".to_string(),
             BackyError::BadConfigFormat(err) => {
                 format!("unable to parse config:\n{}", err).to_string()
+            }
+            BackyError::BadRemoteName => {
+                "invalid rclone_remote setting in config. Run `rclone listremotes` for a list of possible values".to_string()
             }
             BackyError::NoArchiveDir(err) => {
                 format!("unable to create backup dir:\n{}", err)

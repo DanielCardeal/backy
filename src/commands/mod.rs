@@ -6,7 +6,7 @@ use std::{
     fs,
     os::unix::fs::symlink,
     path::{Path, PathBuf},
-    thread,
+    str, thread,
 };
 use tempfile::tempdir;
 
@@ -117,9 +117,11 @@ fn update_archive(config: Config) -> Result<(), BackyError> {
 
 /// Atualiza o drive externo com a versão atual do backup
 fn update_remote(config: Config) -> Result<(), BackyError> {
-    // TODO: Checar se remote tem nome com formatação adequada
     if !user_has_rclone() {
         return Err(BackyError::NoRclone);
+    }
+    if !rclone_valid_remote(&config.rclone_remote) {
+        return Err(BackyError::BadRemoteName);
     }
 
     // Testa conexão com o remote do usuário
@@ -249,4 +251,14 @@ fn user_has_rclone() -> bool {
         .stdout(Stdio::null())
         .status()
         .is_ok()
+}
+
+/// Checa se o remote passado pelo usuário é um remote válido
+fn rclone_valid_remote(rclone_remote: &str) -> bool {
+    let listremotes_output = process::Command::new("rclone")
+        .arg("listremotes")
+        .output()
+        .unwrap();
+    let remotes = str::from_utf8(&listremotes_output.stdout).unwrap();
+    return remotes.lines().any(|remote| rclone_remote.eq(remote));
 }
