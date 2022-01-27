@@ -2,14 +2,13 @@ mod commands;
 mod config;
 mod error;
 
-use commands::Command;
 use error::BackyResult;
 use std::{env, process::exit};
 
 fn run_app() -> BackyResult {
     let args: Vec<String> = env::args().collect();
     let config = config::load()?;
-    let command = Command::from_args(&args)?;
+    let command = commands::from_args(&args)?;
     command.execute(config)?;
     Ok(())
 }
