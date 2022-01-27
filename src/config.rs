@@ -45,6 +45,8 @@ pub struct Config {
     pub archive_path: String,
     /// Número máximo de dias que um backup deve armazenado pelo programa.
     pub remove_older_than: i64,
+    /// Nome do remote que deve ser usado pelo rclone para sincronizar os arquivos
+    pub rclone_remote: String,
 }
 
 pub fn load() -> Result<Config, Box<dyn BackyError>> {

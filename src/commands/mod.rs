@@ -1,5 +1,6 @@
 mod clean;
 mod help;
+mod remote;
 mod update;
 
 use crate::{
@@ -65,6 +66,50 @@ impl BackyError for ErrNoRsync {
     }
 }
 
+/// Erro lançado quando não é possível encontrar o executável do rsync no PATH
+/// do usuário
+struct ErrNoRclone;
+impl BackyError for ErrNoRclone {
+    fn get_err_msg(&self) -> String {
+        "unable to find `rclone` executable".into()
+    }
+}
+
+/// Erro lançado quando o nome do remote não consta na lista de remotes válidos
+/// do `rclone`
+struct ErrBadRemoteName;
+impl BackyError for ErrBadRemoteName {
+    fn get_err_msg(&self) -> String {
+        "invalid rclone_remote setting in config. Run `rclone listremotes` for a list of possible values".into()
+    }
+}
+
+/// Erro lançado quando não é possível criar uma conexão com o remote
+struct ErrInacessibleRemote;
+impl BackyError for ErrInacessibleRemote {
+    fn get_err_msg(&self) -> String {
+        "unable to establish connection with remote. Check your internet connection".into()
+    }
+}
+
+/// Erro lançado quando não é possível comprimir o backup em um arquivo usando o
+/// comando tar
+struct ErrCompressionFailed;
+impl BackyError for ErrCompressionFailed {
+    fn get_err_msg(&self) -> String {
+        "there was an unexpected error while generating the compressed backup file".into()
+    }
+}
+
+/// Erro lançado quando não é possível enviar os arquivos de backup para o drive
+/// remoto
+struct ErrSendRemoteFail;
+impl BackyError for ErrSendRemoteFail {
+    fn get_err_msg(&self) -> String {
+        "unable to send compressed backup to rclone remote".into()
+    }
+}
+
 /// Erro lançado quando não é possível criar o link simbólico para o backup mais
 /// atual
 struct ErrSymCreationFailed {
@@ -94,6 +139,7 @@ pub fn from_args(args: &[String]) -> Result<Box<dyn BackyCommand>, Box<dyn Backy
         "help" => Ok(Box::new(help::CmdHelp)),
         "clean" => Ok(Box::new(clean::CmdClean)),
         "update" => Ok(Box::new(update::CmdUpdate)),
+        "remote" => Ok(Box::new(remote::CmdRemote)),
         cmd => Err(Box::new(ErrBadCommand {
             cmd: cmd.to_string(),
         })),
@@ -106,6 +152,15 @@ pub fn from_args(args: &[String]) -> Result<Box<dyn BackyCommand>, Box<dyn Backy
 /// Checa se o usuário tem o programa `rsync` instalado
 fn user_has_rsync() -> bool {
     process::Command::new("rsync")
+        .arg("--version")
+        .stdout(Stdio::null())
+        .status()
+        .is_ok()
+}
+
+/// Checa se o usuário tem o programa `rclone` instalado
+fn user_has_rclone() -> bool {
+    process::Command::new("rclone")
         .arg("--version")
         .stdout(Stdio::null())
         .status()

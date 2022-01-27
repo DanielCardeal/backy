@@ -10,6 +10,7 @@ USAGE:
 where COMMAND is one of:
     help      Write this help message.
     update    Update backup files to most recent version.
+    remote    Update remote drive with most recent backup version.
     clean     Remove old backups.";
 
 /// Escreve a mensagem de ajuda para o usuário.
