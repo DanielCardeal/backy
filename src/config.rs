@@ -4,36 +4,6 @@ use std::fs;
 use serde::{Deserialize, Serialize};
 
 // #######################
-//   Erros
-// #######################
-/// Erro lançado quando o arquivo de configuração não pode ser encontrado
-struct ErrNoConfigFile;
-impl BackyError for ErrNoConfigFile {
-    fn get_err_msg(&self) -> String {
-        "unable to open the configuration file (maybe the file doesn't exist?)".into()
-    }
-}
-
-/// Erro lançado quando o diretório de configuração não existe
-struct ErrNoConfigDir;
-impl BackyError for ErrNoConfigDir {
-    fn get_err_msg(&self) -> String {
-        "unable to open the configuration directory".into()
-    }
-}
-
-/// Erro lançado quando o arquivo de configuração está mal formado, ou seja, não
-/// tem as configurações necessárias para a execução do programa
-struct ErrBadConfigFormat {
-    err: toml::de::Error,
-}
-impl BackyError for ErrBadConfigFormat {
-    fn get_err_msg(&self) -> String {
-        format!("unable to parse config:\n{}", self.err)
-    }
-}
-
-// #######################
 //    Structs e lógica
 // #######################
 /// Representa as configurações do usuário antes da manipulação e transformação em Config.
@@ -62,5 +32,35 @@ pub fn load() -> Result<Config, Box<dyn BackyError>> {
     match toml::from_str(&config_file) {
         Ok(c) => Ok(c),
         Err(err) => Err(Box::new(ErrBadConfigFormat { err })),
+    }
+}
+
+// #######################
+//         Erros
+// #######################
+/// Erro lançado quando o arquivo de configuração não pode ser encontrado
+struct ErrNoConfigFile;
+impl BackyError for ErrNoConfigFile {
+    fn get_err_msg(&self) -> String {
+        "unable to open the configuration file (maybe the file doesn't exist?)".into()
+    }
+}
+
+/// Erro lançado quando o diretório de configuração não existe
+struct ErrNoConfigDir;
+impl BackyError for ErrNoConfigDir {
+    fn get_err_msg(&self) -> String {
+        "unable to open the configuration directory".into()
+    }
+}
+
+/// Erro lançado quando o arquivo de configuração está mal formado, ou seja, não
+/// tem as configurações necessárias para a execução do programa
+struct ErrBadConfigFormat {
+    err: toml::de::Error,
+}
+impl BackyError for ErrBadConfigFormat {
+    fn get_err_msg(&self) -> String {
+        format!("unable to parse config:\n{}", self.err)
     }
 }
