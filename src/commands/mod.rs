@@ -130,13 +130,19 @@ fn update_remote(config: Config) -> Result<(), BackyError> {
         .current_dir(&config.archive_path)
         .args(["sync", "--dry-run", "latest/", &config.rclone_remote])
         .status()
-        .is_err() {
-            return Err(BackyError::BadRemote(config.rclone_remote));
-        }
+        .is_err()
+    {
+        return Err(BackyError::BadRemote(config.rclone_remote));
+    }
 
     // Comprime o backup
     let today = Utc::today();
-    let backup_file_name = format!("backy_{}-{}-{}.tar.gz", &today.year(), &today.month(), &today.day());
+    let backup_file_name = format!(
+        "backy_{}-{}-{}.tar.gz",
+        &today.year(),
+        &today.month(),
+        &today.day()
+    );
     let temporary_dir = tempdir().unwrap();
     let compressed_filepath = temporary_dir.path().join(backup_file_name);
     if process::Command::new("tar")
@@ -146,9 +152,10 @@ fn update_remote(config: Config) -> Result<(), BackyError> {
         .arg(&compressed_filepath)
         .arg("./")
         .status()
-        .is_err() {
-            return Err(BackyError::CompressionFailed);
-        }
+        .is_err()
+    {
+        return Err(BackyError::CompressionFailed);
+    }
 
     // Sincroniza o backup com o remote
     if process::Command::new("rclone")
@@ -157,9 +164,10 @@ fn update_remote(config: Config) -> Result<(), BackyError> {
         .arg(&compressed_filepath)
         .arg(&config.rclone_remote)
         .status()
-        .is_err() {
-            return Err(BackyError::RemoteSendFail);
-        }
+        .is_err()
+    {
+        return Err(BackyError::RemoteSendFail);
+    }
 
     Ok(())
 }
