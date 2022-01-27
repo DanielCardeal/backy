@@ -1,12 +1,13 @@
 use std::{
     fs::{self, DirEntry},
+    io,
     path::PathBuf,
     thread,
 };
 
 use chrono::{NaiveDate, Utc};
 
-use crate::commands::ErrNoArchiveDir;
+use crate::error::BackyError;
 
 use super::BackyCommand;
 
@@ -59,5 +60,19 @@ impl BackyCommand for CmdClean {
         }
 
         Ok(())
+    }
+}
+
+// #######################
+//         Erros
+// #######################
+/// Erro lançado quando não é possível criar o diretório para arquivar os
+/// backups
+struct ErrNoArchiveDir {
+    err: io::Error,
+}
+impl BackyError for ErrNoArchiveDir {
+    fn get_err_msg(&self) -> String {
+        format!("unable to create backup dir:\n{}", self.err)
     }
 }

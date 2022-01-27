@@ -1,6 +1,6 @@
 use chrono::Utc;
 
-use super::{user_has_rsync, BackyCommand, ErrBadFiles, ErrNoRsync, ErrSymCreationFailed};
+use super::{user_has_rsync, BackyCommand, ErrNoRsync};
 
 use crate::{
     config::Config,
@@ -8,7 +8,7 @@ use crate::{
 };
 
 use std::{
-    fs,
+    fs, io,
     os::unix::fs::symlink,
     path::{Path, PathBuf},
     process, thread,
@@ -77,5 +77,34 @@ fn create_backup_dir(archive_path: &str) -> Result<PathBuf, Box<dyn BackyError>>
     match fs::create_dir_all(&backup_dir) {
         Err(err) => Err(Box::new(ErrSymCreationFailed { err })),
         _ => Ok(backup_dir),
+    }
+}
+
+// #######################
+//         Erros
+// #######################
+/// Erro lançado quando alguns dos arquivos de backup não existem no sistema
+struct ErrBadFiles {
+    missing_files: Vec<String>,
+}
+impl BackyError for ErrBadFiles {
+    fn get_err_msg(&self) -> String {
+        let mut msg = String::from("unable to find the following files:");
+        for file in &self.missing_files {
+            msg.push('\n');
+            msg.push_str(&file);
+        }
+        msg
+    }
+}
+
+/// Erro lançado quando não é possível criar o link simbólico para o backup mais
+/// atual
+struct ErrSymCreationFailed {
+    err: io::Error,
+}
+impl BackyError for ErrSymCreationFailed {
+    fn get_err_msg(&self) -> String {
+        format!("unable to create `latest` symlink:\n{}", self.err)
     }
 }

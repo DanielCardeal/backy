@@ -1,9 +1,9 @@
-use super::{
-    user_has_rclone, BackyCommand, ErrBadRemoteName, ErrCompressionFailed, ErrInacessibleRemote,
-    ErrNoRclone, ErrSendRemoteFail,
-};
+use super::{user_has_rclone, BackyCommand, ErrNoRclone};
 
-use crate::{config::Config, error::BackyResult};
+use crate::{
+    config::Config,
+    error::{BackyError, BackyResult},
+};
 
 use chrono::{Datelike, Utc};
 use std::{
@@ -80,4 +80,42 @@ fn rclone_valid_remote(rclone_remote: &str) -> bool {
         .unwrap();
     let remotes = str::from_utf8(&listremotes_output.stdout).unwrap();
     return remotes.lines().any(|remote| rclone_remote.eq(remote));
+}
+
+// #######################
+//         Erros
+// #######################
+/// Erro lançado quando não é possível enviar os arquivos de backup para o drive
+/// remoto
+struct ErrSendRemoteFail;
+impl BackyError for ErrSendRemoteFail {
+    fn get_err_msg(&self) -> String {
+        "unable to send compressed backup to rclone remote".into()
+    }
+}
+
+/// Erro lançado quando o nome do remote não consta na lista de remotes válidos
+/// do `rclone`
+struct ErrBadRemoteName;
+impl BackyError for ErrBadRemoteName {
+    fn get_err_msg(&self) -> String {
+        "invalid rclone_remote setting in config. Run `rclone listremotes` for a list of possible values".into()
+    }
+}
+
+/// Erro lançado quando não é possível criar uma conexão com o remote
+struct ErrInacessibleRemote;
+impl BackyError for ErrInacessibleRemote {
+    fn get_err_msg(&self) -> String {
+        "unable to establish connection with remote. Check your internet connection".into()
+    }
+}
+
+/// Erro lançado quando não é possível comprimir o backup em um arquivo usando o
+/// comando tar
+struct ErrCompressionFailed;
+impl BackyError for ErrCompressionFailed {
+    fn get_err_msg(&self) -> String {
+        "there was an unexpected error while generating the compressed backup file".into()
+    }
 }
