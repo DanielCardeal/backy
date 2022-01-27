@@ -1,6 +1,8 @@
-use crate::{config::Config, error::BackyError};
+use crate::{
+    config::Config,
+    error::{BackyError, BackyResult},
+};
 use chrono::{NaiveDate, Utc};
-use std::fs::DirEntry;
 use std::process::{self, Stdio};
 use std::{
     fs,
@@ -8,7 +10,79 @@ use std::{
     path::{Path, PathBuf},
     thread,
 };
+use std::{fs::DirEntry, io};
 
+// #######################
+//   Erros
+// #######################
+/// Erro lançado quando o usuário não fornece um comando para o programa
+/// executar
+struct ErrNoCommand;
+impl BackyError for ErrNoCommand {
+    fn get_err_msg(&self) -> String {
+        "no command to execute. Try `backy help` for aditional information.".into()
+    }
+}
+
+/// Erro lançado quando o comando que usuário deseja executar não existe
+struct ErrBadCommand {
+    cmd: String,
+}
+impl BackyError for ErrBadCommand {
+    fn get_err_msg(&self) -> String {
+        format!("command '{}' doesn't exist", self.cmd).into()
+    }
+}
+
+/// Erro lançado quando não é possível criar o diretório para arquivar os
+/// backups
+struct ErrNoArchiveDir {
+    err: io::Error,
+}
+impl BackyError for ErrNoArchiveDir {
+    fn get_err_msg(&self) -> String {
+        format!("unable to create backup dir:\n{}", self.err)
+    }
+}
+
+/// Erro lançado quando alguns dos arquivos de backup não existem no sistema
+struct ErrBadFiles {
+    missing_files: Vec<String>,
+}
+impl BackyError for ErrBadFiles {
+    fn get_err_msg(&self) -> String {
+        let mut msg = String::from("unable to find the following files:");
+        for file in &self.missing_files {
+            msg.push('\n');
+            msg.push_str(&file);
+        }
+        msg
+    }
+}
+
+/// Erro lançado quando não é possível encontrar o executável do rsync no PATH
+/// do usuário
+struct ErrNoRsync;
+impl BackyError for ErrNoRsync {
+    fn get_err_msg(&self) -> String {
+        "unable to find `rsync` executable".into()
+    }
+}
+
+/// Erro lançado quando não é possível criar o link simbólico para o backup mais
+/// atual
+struct ErrSymCreationFailed {
+    err: io::Error,
+}
+impl BackyError for ErrSymCreationFailed {
+    fn get_err_msg(&self) -> String {
+        format!("unable to create `latest` symlink:\n{}", self.err)
+    }
+}
+
+// #######################
+//        Comandos
+// #######################
 const HELP_MSG: &'static str = "\
 Backy helps users to manage local and remote backups using the rclone and rsync tools.
 
@@ -32,20 +106,22 @@ pub enum Command {
 
 impl Command {
     /// Cria e devolve o comando correspondente à lista argumentos
-    pub fn from_args(args: &[String]) -> Result<Self, BackyError> {
+    pub fn from_args(args: &[String]) -> Result<Self, Box<dyn BackyError>> {
         if args.len() <= 1 {
-            return Err(BackyError::NoCommand);
+            return Err(Box::new(ErrNoCommand));
         }
         match args[1].as_str() {
             "help" => Ok(Command::Help),
             "clean" => Ok(Command::Clean),
             "update" => Ok(Command::Update),
-            cmd => Err(BackyError::BadCommand(cmd.to_string())),
+            cmd => Err(Box::new(ErrBadCommand {
+                cmd: cmd.to_string(),
+            })),
         }
     }
 
     /// Executa este comando
-    pub fn execute(self, config: Config) -> Result<(), BackyError> {
+    pub fn execute(self, config: Config) -> BackyResult {
         // TODO: reorganizar essa função quando tiver o restante dos comandos
         match self {
             Command::Clean => clean_archive(config),
@@ -60,21 +136,21 @@ impl Command {
 // #######################
 
 /// Escreve uma mensagem de ajuda para o usuário.
-fn print_help() -> Result<(), BackyError> {
+fn print_help() -> BackyResult {
     println!("{}", HELP_MSG);
     Ok(())
 }
 
 /// Cria um novo snapshot do sistema na pasta de archive
-fn update_archive(config: Config) -> Result<(), BackyError> {
+fn update_archive(config: Config) -> BackyResult {
     if !user_has_rsync() {
-        return Err(BackyError::NoRsync);
+        return Err(Box::new(ErrNoRsync));
     }
 
     // Checa se todos os arquivos que devem ser armazenados existem
-    let inexistent_files = inexistent_files(&config.files);
-    if inexistent_files.len() > 0 {
-        return Err(BackyError::BadFiles(inexistent_files));
+    let missing_files = inexistent_files(&config.files);
+    if missing_files.len() > 0 {
+        return Err(Box::new(ErrBadFiles { missing_files }));
     }
 
     // Cria o diretório do backup de hoje
@@ -103,14 +179,14 @@ fn update_archive(config: Config) -> Result<(), BackyError> {
     // Recria o link simbólico para latest
     fs::remove_file(&latest_link).ok();
     if let Err(err) = symlink(&backup_dir, &latest_link) {
-        return Err(BackyError::SymCreationFailed(err));
+        return Err(Box::new(ErrSymCreationFailed { err }));
     };
 
     Ok(())
 }
 
 /// Deleta da memória os arquivos com mais de `config.remove_older_than` dias.
-fn clean_archive(config: Config) -> Result<(), BackyError> {
+fn clean_archive(config: Config) -> BackyResult {
     println!(
         "Removing backups older than {} days.",
         config.remove_older_than
@@ -118,7 +194,7 @@ fn clean_archive(config: Config) -> Result<(), BackyError> {
     let backup_dir = PathBuf::from(&config.archive_path);
     let backup_list: Vec<DirEntry> = match fs::read_dir(backup_dir) {
         Ok(list) => list,
-        Err(err) => return Err(BackyError::NoArchiveDir(err)),
+        Err(err) => return Err(Box::new(ErrNoArchiveDir { err })),
     }
     .map(|backup| backup.unwrap())
     .filter(|backup| {
@@ -170,12 +246,12 @@ fn inexistent_files(files: &[String]) -> Vec<String> {
 }
 
 /// Cria um diretório para o backup.
-fn create_backup_dir(archive_path: &str) -> Result<PathBuf, BackyError> {
+fn create_backup_dir(archive_path: &str) -> Result<PathBuf, Box<dyn BackyError>> {
     let today = Utc::today().format("%Y%m%d/").to_string();
     let mut backup_dir = PathBuf::from(archive_path);
     backup_dir.push(&today);
     match fs::create_dir_all(&backup_dir) {
-        Err(err) => Err(BackyError::NoArchiveDir(err)),
+        Err(err) => Err(Box::new(ErrSymCreationFailed { err })),
         _ => Ok(backup_dir),
     }
 }

@@ -3,10 +3,10 @@ mod config;
 mod error;
 
 use commands::Command;
-use error::BackyError;
+use error::BackyResult;
 use std::{env, process::exit};
 
-fn run_app() -> Result<(), BackyError> {
+fn run_app() -> BackyResult {
     let args: Vec<String> = env::args().collect();
     let config = config::load()?;
     let command = Command::from_args(&args)?;
@@ -16,7 +16,7 @@ fn run_app() -> Result<(), BackyError> {
 
 fn main() {
     if let Err(err) = run_app() {
-        eprintln!("{}", err);
+        err.display();
         exit(1);
     }
 }
