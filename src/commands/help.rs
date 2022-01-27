@@ -13,6 +13,9 @@ where COMMAND is one of:
     remote    Update remote drive with most recent backup version.
     clean     Remove old backups.";
 
+// #######################
+//   Definições públicas
+// #######################
 /// Escreve a mensagem de ajuda para o usuário.
 pub struct CmdHelp;
 impl BackyCommand for CmdHelp {

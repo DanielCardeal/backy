@@ -14,6 +14,9 @@ use std::{
     process, thread,
 };
 
+// #######################
+//   Definições públicas
+// #######################
 pub struct CmdUpdate;
 impl BackyCommand for CmdUpdate {
     fn execute(&self, config: Config) -> BackyResult {
@@ -60,6 +63,9 @@ impl BackyCommand for CmdUpdate {
     }
 }
 
+// #######################
+//   Definições privadas
+// #######################
 /// Lista os arquivos de `files` que não existem.
 fn inexistent_files(files: &[String]) -> Vec<String> {
     files

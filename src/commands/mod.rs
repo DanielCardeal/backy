@@ -7,13 +7,10 @@ use crate::{
     config::Config,
     error::{BackyError, BackyResult},
 };
-use std::{
-    io,
-    process::{self, Stdio},
-};
+use std::process::{self, Stdio};
 
 // #######################
-//        Comandos
+//   Definições públicas
 // #######################
 /// Comandos (ou modos de operação) que o programa pode ser executado.
 pub trait BackyCommand {
@@ -38,7 +35,7 @@ pub fn from_args(args: &[String]) -> Result<Box<dyn BackyCommand>, Box<dyn Backy
 }
 
 // #######################
-//   Funções auxiliares
+//   Definições privadas
 // #######################
 /// Checa se o usuário tem o programa `rsync` instalado
 fn user_has_rsync() -> bool {

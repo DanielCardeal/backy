@@ -4,7 +4,7 @@ use std::fs;
 use serde::{Deserialize, Serialize};
 
 // #######################
-//    Structs e lógica
+//   Definições públicas
 // #######################
 /// Representa as configurações do usuário antes da manipulação e transformação em Config.
 #[derive(Serialize, Deserialize, Debug)]

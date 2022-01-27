@@ -1,3 +1,6 @@
+// #######################
+//   Definições públicas
+// #######################
 /// Um erro encontrado durante a execução do programa.
 pub trait BackyError {
     /// Mostra a mensagem de erro relevante para o usuário

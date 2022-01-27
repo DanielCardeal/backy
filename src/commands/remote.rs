@@ -12,6 +12,9 @@ use std::{
 };
 use tempfile::tempdir;
 
+// #######################
+//   Definições públicas
+// #######################
 pub struct CmdRemote;
 impl BackyCommand for CmdRemote {
     /// Atualiza o drive externo com a versão atual do backup
@@ -72,6 +75,9 @@ impl BackyCommand for CmdRemote {
     }
 }
 
+// #######################
+//   Definições privadas
+// #######################
 /// Checa se o remote passado pelo usuário é um remote válido
 fn rclone_valid_remote(rclone_remote: &str) -> bool {
     let listremotes_output = process::Command::new("rclone")
