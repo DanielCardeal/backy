@@ -19,21 +19,37 @@ pub struct Config {
     pub rclone_remote: String,
 }
 
+/// Carrega o arquivo de configuração do usuário e devolve uma struct com os
+/// valores já settados.
 pub fn load() -> Result<Config, Box<dyn BackyError>> {
+    // Carrega arquivo de configuração
+    let config_str = read_config()?;
+    let mut config : Config = match toml::from_str(&config_str) {
+        Ok(c) => c,
+        Err(err) => return Err(Box::new(ErrBadConfigFormat { err })),
+    };
+
+    Ok(config)
+}
+
+// #######################
+//   Definições públicas
+// #######################
+/// Lê o arquivo de configuração do usuário e o devolve como uma string
+fn read_config() -> Result<String, Box<dyn BackyError>> {
+    // Encontra o path para o arquivo de configuração
     let mut config_path = match dirs::config_dir() {
         Some(d) => d,
         None => return Err(Box::new(ErrNoConfigDir)),
     };
     config_path.push("backy/config.toml");
-    let config_file = match fs::read_to_string(config_path) {
-        Ok(f) => f,
+    // Lê a config para uma string
+    match fs::read_to_string(config_path) {
+        Ok(f) => Ok(f),
         _ => return Err(Box::new(ErrNoConfigFile)),
-    };
-    match toml::from_str(&config_file) {
-        Ok(c) => Ok(c),
-        Err(err) => Err(Box::new(ErrBadConfigFormat { err })),
     }
 }
+
 
 // #######################
 //         Erros
