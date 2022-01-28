@@ -1,3 +1,4 @@
+mod logging;
 mod commands;
 mod config;
 mod error;

@@ -7,7 +7,10 @@ use std::{
 
 use chrono::{NaiveDate, Utc};
 
-use crate::error::BackyError;
+use crate::{
+    error::BackyError,
+    logging::{info, log},
+};
 
 use super::BackyCommand;
 
@@ -15,8 +18,8 @@ use super::BackyCommand;
 pub struct CmdClean;
 impl BackyCommand for CmdClean {
     fn execute(&self, config: crate::config::Config) -> crate::error::BackyResult {
-        println!(
-            "Removing backups older than {} days.",
+        info!(
+            "Removing backups versions older than {} days.",
             config.remove_older_than
         );
         let backup_dir = PathBuf::from(&config.archive_path);
@@ -50,13 +53,15 @@ impl BackyCommand for CmdClean {
             let mut handles = vec![];
             for backup in backups_to_remove {
                 handles.push(thread::spawn(move || {
-                    println!("Removing backup '{}'", backup.file_name().to_str().unwrap());
+                    info!("Removing backup '{}'", backup.file_name().to_str().unwrap());
                     fs::remove_dir_all(backup.path()).unwrap();
                 }));
             }
             for handle in handles {
                 handle.join().unwrap();
             }
+        } else {
+            info!("Only one backup remaining. No cleanup needed.");
         }
 
         Ok(())

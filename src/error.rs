@@ -1,3 +1,5 @@
+use crate::logging::{error, log};
+
 // #######################
 //   Definições públicas
 // #######################
@@ -6,7 +8,7 @@ pub trait BackyError {
     /// Mostra a mensagem de erro relevante para o usuário
     fn display(&self) {
         let msg = self.get_err_msg();
-        eprintln!("Error: {}", msg);
+        error!(msg);
     }
 
     /// Devolve a mensagem de erro a ser mostrada para o usuário

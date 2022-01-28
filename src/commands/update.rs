@@ -5,6 +5,7 @@ use super::{user_has_rsync, BackyCommand, ErrNoRsync};
 use crate::{
     config::Config,
     error::{BackyError, BackyResult},
+    logging::{info, log},
 };
 
 use std::{
@@ -36,12 +37,13 @@ impl BackyCommand for CmdUpdate {
         let latest_arg = format!("--link-dest={}", latest_link);
 
         // Faz o backup (assíncrono) de cada um dos arquivos
+        info!("Updating archive files to most recent version.");
         let mut handles = vec![];
         for file in config.files {
             let backup_dir = backup_dir.clone();
             let latest_arg = latest_arg.clone();
             handles.push(thread::spawn(move || {
-                println!("backing up '{}'...", file);
+                info!("Backing up '{}'.", file);
                 let _rsync_status = process::Command::new("rsync")
                     .current_dir(backup_dir)
                     .args(["-az", "--delete", &file, &latest_arg, "."])
@@ -54,6 +56,7 @@ impl BackyCommand for CmdUpdate {
         }
 
         // Recria o link simbólico para latest
+        info!("Updating `latest` link.");
         fs::remove_file(&latest_link).ok();
         if let Err(err) = symlink(&backup_dir, &latest_link) {
             return Err(Box::new(ErrSymCreationFailed { err }));

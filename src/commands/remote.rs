@@ -3,6 +3,7 @@ use super::{user_has_rclone, BackyCommand, ErrNoRclone};
 use crate::{
     config::Config,
     error::{BackyError, BackyResult},
+    logging::{info, log},
 };
 
 use chrono::{Datelike, Utc};
@@ -27,6 +28,7 @@ impl BackyCommand for CmdRemote {
         }
 
         // Testa conexão com o remote do usuário
+        info!("Testing conection with remote drive `{}`.", &config.rclone_remote);
         if process::Command::new("rclone")
             .stderr(Stdio::null())
             .current_dir(&config.archive_path)
@@ -38,6 +40,7 @@ impl BackyCommand for CmdRemote {
         }
 
         // Comprime o backup
+        info!("Compressing backup data");
         let today = Utc::today();
         let backup_file_name = format!(
             "backy_{}-{}-{}.tar.gz",
@@ -60,6 +63,7 @@ impl BackyCommand for CmdRemote {
         }
 
         // Sincroniza o backup com o remote
+        info!("Syncing data with remote");
         if process::Command::new("rclone")
             .arg("sync")
             .arg("--progress")
