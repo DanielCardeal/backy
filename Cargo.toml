@@ -14,3 +14,5 @@ dirs = "4.0"
 chrono = "0.4"
 # Arquivos temporários
 tempfile = "3.1.0"
+# Output colorido no terminal
+colored = "2"
