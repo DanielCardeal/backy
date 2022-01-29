@@ -1,5 +1,5 @@
 use crate::error::BackyError;
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -9,8 +9,11 @@ use serde::{Deserialize, Serialize};
 /// Representa as configurações do usuário antes da manipulação e transformação em Config.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    /// Lista dos arquivos que devem ser armazenados pelo backup.
-    pub files: Vec<String>,
+    /// Caminho para a base do backup do usuário. É inicializado como $HOME caso
+    /// nenhum valor seja associado.
+    pub backup_root: Option<PathBuf>,
+    /// Lista dos arquivos/diretórios que devem ser ignorados pelo backup.
+    pub exclude_files: Option<Vec<String>>,
     /// Local do disco onde devem ser armazenados os backups incrementais.
     pub archive_path: String,
     /// Número máximo de dias que um backup deve armazenado pelo programa.
@@ -24,10 +27,13 @@ pub struct Config {
 pub fn load() -> Result<Config, Box<dyn BackyError>> {
     // Carrega arquivo de configuração
     let config_str = read_config()?;
-    let mut config : Config = match toml::from_str(&config_str) {
+    let mut config: Config = match toml::from_str(&config_str) {
         Ok(c) => c,
         Err(err) => return Err(Box::new(ErrBadConfigFormat { err })),
     };
+    // Tenta inferir o diretório $HOME como base do backup caso nenhum valor
+    // seja passado
+    config.backup_root = config.backup_root.or_else(dirs::home_dir);
 
     Ok(config)
 }
@@ -49,7 +55,6 @@ fn read_config() -> Result<String, Box<dyn BackyError>> {
         _ => return Err(Box::new(ErrNoConfigFile)),
     }
 }
-
 
 // #######################
 //         Erros

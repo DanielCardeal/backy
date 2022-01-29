@@ -8,12 +8,7 @@ use crate::{
     logging::{info, log},
 };
 
-use std::{
-    fs, io,
-    os::unix::fs::symlink,
-    path::{Path, PathBuf},
-    process, thread,
-};
+use std::{fs, io, os::unix::fs::symlink, path::PathBuf, process};
 
 // #######################
 //   Definições públicas
@@ -24,35 +19,36 @@ impl BackyCommand for CmdUpdate {
         if !user_has_rsync() {
             return Err(Box::new(ErrNoRsync));
         }
-
-        // Checa se todos os arquivos que devem ser armazenados existem
-        let missing_files = inexistent_files(&config.files);
-        if missing_files.len() > 0 {
-            return Err(Box::new(ErrBadFiles { missing_files }));
+        if let None = &config.backup_root {
+            return Err(Box::new(ErrNoBackupRoot));
         }
+        let backup_root_str = gen_backup_root_str(&config.backup_root.unwrap())?;
 
         // Cria o diretório do backup de hoje
         let backup_dir = create_backup_dir(&config.archive_path)?;
         let latest_link = format!("{}/latest", &config.archive_path);
         let latest_arg = format!("--link-dest={}", latest_link);
 
-        // Faz o backup (assíncrono) de cada um dos arquivos
-        info!("Updating archive files to most recent version.");
-        let mut handles = vec![];
-        for file in config.files {
-            let backup_dir = backup_dir.clone();
-            let latest_arg = latest_arg.clone();
-            handles.push(thread::spawn(move || {
-                info!("Backing up '{}'.", file);
-                let _rsync_status = process::Command::new("rsync")
-                    .current_dir(backup_dir)
-                    .args(["-az", "--delete", &file, &latest_arg, "."])
-                    .status()
-                    .unwrap();
-            }));
-        }
-        for handle in handles {
-            handle.join().unwrap();
+        // Faz o backup dos backups, excluíndo arquivos caso necessário
+        info!("Backing up '{}'.", &backup_root_str);
+        if let Some(exclude_files) = &config.exclude_files {
+            let exclude_arg = gen_exclude_arg(&exclude_files);
+            process::Command::new("rsync")
+                .current_dir(&backup_dir)
+                .arg(&backup_root_str)
+                .args(["-avz", "--delete", "--copy-links", &latest_arg])
+                .args(&exclude_arg)
+                .arg(".")
+                .status()
+                .unwrap();
+        } else {
+            process::Command::new("rsync")
+                .current_dir(&backup_dir)
+                .arg(&backup_root_str)
+                .args(["-az", "--delete", "--copy-links", &latest_arg])
+                .arg(".")
+                .status()
+                .unwrap();
         }
 
         // Recria o link simbólico para latest
@@ -69,15 +65,6 @@ impl BackyCommand for CmdUpdate {
 // #######################
 //   Definições privadas
 // #######################
-/// Lista os arquivos de `files` que não existem.
-fn inexistent_files(files: &[String]) -> Vec<String> {
-    files
-        .iter()
-        .filter(|f| !Path::new(f).exists())
-        .cloned()
-        .collect()
-}
-
 /// Cria um diretório para o backup.
 fn create_backup_dir(archive_path: &str) -> Result<PathBuf, Box<dyn BackyError>> {
     let today = Utc::today().format("%Y%m%d/").to_string();
@@ -89,21 +76,43 @@ fn create_backup_dir(archive_path: &str) -> Result<PathBuf, Box<dyn BackyError>>
     }
 }
 
+/// Gera a string que representa o diretório base do backup
+fn gen_backup_root_str(backup_root: &PathBuf) -> Result<String, Box<dyn BackyError>> {
+    let mut backup_root = backup_root.clone();
+    if !backup_root.is_dir() {
+        return Err(Box::new(ErrBackupRootNotDir));
+    }
+    backup_root.push(PathBuf::from(""));
+    return Ok(format!("{}", backup_root.display()));
+}
+
+/// Gera diretivas --exclude para os arquivos passados pelo usuário
+fn gen_exclude_arg<'a>(exclude_files: &'a[String]) -> Vec<&'a str> {
+    let mut exclude_arg = Vec::new();
+    for file in exclude_files {
+        exclude_arg.push("--exclude");
+        exclude_arg.push(file);
+    }
+    return exclude_arg;
+}
+
 // #######################
 //         Erros
 // #######################
-/// Erro lançado quando alguns dos arquivos de backup não existem no sistema
-struct ErrBadFiles {
-    missing_files: Vec<String>,
-}
-impl BackyError for ErrBadFiles {
+/// Erro lançado quando não foi possível inferir/não foi fornecido um diretório
+/// base para o backup
+struct ErrNoBackupRoot;
+impl BackyError for ErrNoBackupRoot {
     fn get_err_msg(&self) -> String {
-        let mut msg = String::from("unable to find the following files:");
-        for file in &self.missing_files {
-            msg.push('\n');
-            msg.push_str(&file);
-        }
-        msg
+        "unable to infer a root for the backup. Please set the value `backup_root` on your config file.".into()
+    }
+}
+
+/// Erro lançado quando o diretório base do backup não é um diretório
+struct ErrBackupRootNotDir;
+impl BackyError for ErrBackupRootNotDir {
+    fn get_err_msg(&self) -> String {
+        "the backup_root is not a directory.".into()
     }
 }
 
