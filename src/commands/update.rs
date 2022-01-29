@@ -82,6 +82,8 @@ fn gen_backup_root_str(backup_root: &PathBuf) -> Result<String, Box<dyn BackyErr
     if !backup_root.is_dir() {
         return Err(Box::new(ErrBackupRootNotDir));
     }
+    // NOTE: isso garante que o path terá um '/' no final, o que impede que o
+    // impede que o rsync crie um subdiretório acima do backup
     backup_root.push(PathBuf::from(""));
     return Ok(format!("{}", backup_root.display()));
 }
