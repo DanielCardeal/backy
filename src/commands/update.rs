@@ -36,7 +36,7 @@ impl BackyCommand for CmdUpdate {
             process::Command::new("rsync")
                 .current_dir(&backup_dir)
                 .arg(&backup_root_str)
-                .args(["-avz", "--delete", "--copy-links", &latest_arg])
+                .args(["-az", "--delete", "--copy-links", &latest_arg])
                 .args(&exclude_arg)
                 .arg(".")
                 .status()
