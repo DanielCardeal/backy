@@ -1,7 +1,7 @@
-mod logging;
 mod commands;
 mod config;
 mod error;
+mod logging;
 
 use error::BackyResult;
 use std::{env, process::exit};

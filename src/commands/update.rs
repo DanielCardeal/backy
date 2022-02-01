@@ -89,7 +89,7 @@ fn gen_backup_root_str(backup_root: &PathBuf) -> Result<String, Box<dyn BackyErr
 }
 
 /// Gera diretivas --exclude para os arquivos passados pelo usuário
-fn gen_exclude_arg<'a>(exclude_files: &'a[String]) -> Vec<&'a str> {
+fn gen_exclude_arg<'a>(exclude_files: &'a [String]) -> Vec<&'a str> {
     let mut exclude_arg = Vec::new();
     for file in exclude_files {
         exclude_arg.push("--exclude");

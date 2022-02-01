@@ -28,7 +28,10 @@ impl BackyCommand for CmdRemote {
         }
 
         // Testa conexão com o remote do usuário
-        info!("Testing conection with remote drive `{}`.", &config.rclone_remote);
+        info!(
+            "Testing conection with remote drive `{}`.",
+            &config.rclone_remote
+        );
         if process::Command::new("rclone")
             .stderr(Stdio::null())
             .current_dir(&config.archive_path)

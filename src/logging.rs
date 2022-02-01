@@ -38,6 +38,6 @@ macro_rules! error {
     };
 }
 
-pub(crate) use log;
-pub(crate) use info;
 pub(crate) use error;
+pub(crate) use info;
+pub(crate) use log;
