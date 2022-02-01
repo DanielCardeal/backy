@@ -3,7 +3,7 @@ use chrono::Utc;
 use super::{user_has_rsync, BackyCommand, ErrNoRsync};
 
 use crate::{
-    config::Config,
+    config::{BackupDescription, Config},
     error::{BackyError, BackyResult},
     logging::{info, log},
 };
@@ -24,32 +24,17 @@ impl BackyCommand for CmdUpdate {
         let mut latest_link = config.archive_path.clone();
         latest_link.push("latest");
 
-        for (name, desc) in &config.backups {
-            let backup_root_str = gen_backup_root_str(&desc.backup_root)?;
-            let mut latest_link = latest_link.clone();
-            latest_link.push(name);
+        // TODO: paralelizar
+        // Executa backups assíncronamente
+        let backup_tasks: Vec<_> = config
+            .backups
+            .iter()
+            .map(|(name, desc)| create_named_backup(&backup_dir, &latest_link, &name, &desc))
+            .collect();
 
-            // Cria o comando `rsync` para o backup dos arquivos selecionados
-            let mut rsync_command = process::Command::new("rsync");
-            rsync_command
-                .current_dir(&backup_dir)
-                .arg(&backup_root_str)
-                .args(["-az", "--delete"])
-                .arg("--link-dest")
-                .arg(latest_link)
-                .arg(&name);
-
-            if let Some(exclude_files) = &desc.exclude_files {
-                let exclude_arg = gen_exclude_arg(&exclude_files);
-                rsync_command.args(exclude_arg);
-            }
-
-            // Executa o backup
-            info!("Creating '{}' backup.", &name);
-            let rsync_status = rsync_command.status().unwrap();
-            if !rsync_status.success() {
-                return Err(Box::new(ErrRsyncFail));
-            }
+        // Coleta erros caso encontre algum
+        for backup_result in backup_tasks {
+            backup_result?;
         }
 
         // Recria o link simbólico para latest
@@ -89,6 +74,42 @@ fn gen_backup_root_str(backup_root: &PathBuf) -> Result<String, Box<dyn BackyErr
     // impede que o rsync crie um subdiretório acima do backup
     backup_root.push(PathBuf::from(""));
     return Ok(format!("{}", backup_root.display()));
+}
+
+/// Usa o rsync para gerar um backup nomeado na pasta de backups.
+fn create_named_backup(
+    backup_dir: &PathBuf,
+    latest_link: &PathBuf,
+    name: &String,
+    desc: &BackupDescription,
+) -> BackyResult {
+    let backup_root_str = gen_backup_root_str(&desc.backup_root)?;
+    let mut latest_link = latest_link.clone();
+    latest_link.push(name);
+
+    // Cria o comando `rsync` para o backup dos arquivos selecionados
+    let mut rsync_command = process::Command::new("rsync");
+    rsync_command
+        .current_dir(&backup_dir)
+        .arg(&backup_root_str)
+        .args(["-az", "--delete"])
+        .arg("--link-dest")
+        .arg(latest_link)
+        .arg(&name);
+
+    if let Some(exclude_files) = &desc.exclude_files {
+        let exclude_arg = gen_exclude_arg(&exclude_files);
+        rsync_command.args(exclude_arg);
+    }
+
+    // Executa o backupaa
+    info!("Creating '{}' backup.", &name);
+    let rsync_status = rsync_command.status().unwrap();
+    if !rsync_status.success() {
+        return Err(Box::new(ErrRsyncFail));
+    }
+
+    Ok(())
 }
 
 /// Gera diretivas --exclude para os arquivos passados pelo usuário
