@@ -4,7 +4,7 @@ use crate::logging::{error, log};
 //   Definições públicas
 // #######################
 /// Um erro encontrado durante a execução do programa.
-pub trait BackyError {
+pub trait BackyError: Send + Sync {
     /// Mostra a mensagem de erro relevante para o usuário
     fn display(&self) {
         let msg = self.get_err_msg();

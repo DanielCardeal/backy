@@ -8,7 +8,7 @@ use crate::{
     logging::{info, log},
 };
 
-use std::{fs, io, os::unix::fs::symlink, path::PathBuf, process};
+use std::{fs, io, os::unix::fs::symlink, path::PathBuf, process, sync::Arc, thread};
 
 // #######################
 //   Definições públicas
@@ -20,29 +20,33 @@ impl BackyCommand for CmdUpdate {
             return Err(Box::new(ErrNoRsync));
         }
         // Cria o diretório do backup de hoje
-        let backup_dir = create_backup_dir(&config.archive_path)?;
-        let mut latest_link = config.archive_path.clone();
-        latest_link.push("latest");
+        let backup_dir = Arc::new(create_backup_dir(&config.archive_path)?);
+        let latest_link = {
+            let mut latest_link = config.archive_path.clone();
+            latest_link.push("latest");
+            Arc::new(latest_link)
+        };
 
-        // TODO: paralelizar
         // Executa backups assíncronamente
-        let backup_tasks: Vec<_> = config
-            .backups
-            .iter()
-            .map(|(name, desc)| create_named_backup(&backup_dir, &latest_link, &name, &desc))
-            .collect();
+        let mut backup_handles = Vec::new();
+        for (name, desc) in config.backups {
+            let backup_dir = backup_dir.clone();
+            let latest_link = latest_link.clone();
+            let backup_task =
+                thread::spawn(move || create_named_backup(&backup_dir, &latest_link, &name, &desc));
+            backup_handles.push(backup_task);
+        }
 
         // Coleta erros caso encontre algum
-        for backup_result in backup_tasks {
-            backup_result?;
+        for backup in backup_handles {
+            let result = backup.join().unwrap();
+            result?;
         }
 
         // Recria o link simbólico para latest
         info!("Updating `latest` link.");
-        if let Err(err) = fs::remove_file(&latest_link) {
-            return Err(Box::new(ErrLatestUpdate { err }));
-        }
-        if let Err(err) = symlink(&backup_dir, &latest_link) {
+        fs::remove_file(&*latest_link).ok();
+        if let Err(err) = symlink(&*backup_dir, &*latest_link) {
             return Err(Box::new(ErrLatestUpdate { err }));
         };
 
