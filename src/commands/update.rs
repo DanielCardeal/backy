@@ -49,6 +49,8 @@ impl BackyCommand for CmdUpdate {
         // Executa o backup
         info!("Backing up '{}'.", &backup_root_str);
         let rsync_status = rsync_command.status().unwrap();
+        if !rsync_status.success() {
+            return Err(Box::new(ErrRsyncFail));
         }
 
         // Recria o link simbólico para latest
@@ -136,5 +138,13 @@ struct ErrSymCreationFailed {
 impl BackyError for ErrSymCreationFailed {
     fn get_err_msg(&self) -> String {
         format!("unable to create `latest` symlink:\n{}", self.err)
+    }
+}
+
+/// Erro lançado quando algum problema é encontrado na execução do comando rsync
+struct ErrRsyncFail;
+impl BackyError for ErrRsyncFail {
+    fn get_err_msg(&self) -> String {
+        "rsync failed to create user backup. Error description can be found above.".into()
     }
 }
