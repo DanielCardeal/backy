@@ -6,7 +6,7 @@ mod logging;
 use error::BackyResult;
 use std::{env, process::exit};
 
-fn run_app() -> BackyResult {
+fn run_app() -> BackyResult<()> {
     let args: Vec<String> = env::args().collect();
     let config = config::load()?;
     let command = commands::from_args(&args)?;

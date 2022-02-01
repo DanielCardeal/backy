@@ -8,7 +8,7 @@ use std::{
 use chrono::{NaiveDate, Utc};
 
 use crate::{
-    error::BackyError,
+    error::{BackyError, BackyResult},
     logging::{info, log},
 };
 
@@ -17,7 +17,7 @@ use super::BackyCommand;
 /// Remove backups antigos.
 pub struct CmdClean;
 impl BackyCommand for CmdClean {
-    fn execute(&self, config: crate::config::Config) -> crate::error::BackyResult {
+    fn execute(&self, config: crate::config::Config) -> BackyResult<()> {
         info!(
             "Removing backups versions older than {} days.",
             config.remove_older_than

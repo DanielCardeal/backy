@@ -19,7 +19,7 @@ where COMMAND is one of:
 /// Escreve a mensagem de ajuda para o usuário.
 pub struct CmdHelp;
 impl BackyCommand for CmdHelp {
-    fn execute(&self, _config: crate::config::Config) -> BackyResult {
+    fn execute(&self, _config: crate::config::Config) -> BackyResult<()> {
         println!("{}", HELP_MSG);
         Ok(())
     }

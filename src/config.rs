@@ -1,4 +1,4 @@
-use crate::error::BackyError;
+use crate::error::{BackyError, BackyResult};
 use std::{collections::HashMap, fs, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -32,7 +32,7 @@ pub struct BackupDescription {
 
 /// Carrega o arquivo de configuração do usuário e devolve uma struct com os
 /// valores já settados.
-pub fn load() -> Result<Config, Box<dyn BackyError>> {
+pub fn load() -> BackyResult<Config> {
     // Carrega arquivo de configuração
     let config_str = read_config()?;
     let config: Config = match toml::from_str(&config_str) {
@@ -47,7 +47,7 @@ pub fn load() -> Result<Config, Box<dyn BackyError>> {
 //   Definições públicas
 // #######################
 /// Lê o arquivo de configuração do usuário e o devolve como uma string
-fn read_config() -> Result<String, Box<dyn BackyError>> {
+fn read_config() -> BackyResult<String> {
     // Encontra o path para o arquivo de configuração
     let mut config_path = match dirs::config_dir() {
         Some(d) => d,

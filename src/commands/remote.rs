@@ -19,7 +19,7 @@ use tempfile::tempdir;
 pub struct CmdRemote;
 impl BackyCommand for CmdRemote {
     /// Atualiza o drive externo com a versão atual do backup
-    fn execute(&self, config: Config) -> BackyResult {
+    fn execute(&self, config: Config) -> BackyResult<()> {
         if !user_has_rclone() {
             return Err(Box::new(ErrNoRclone));
         }

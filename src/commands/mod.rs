@@ -15,11 +15,11 @@ use std::process::{self, Stdio};
 /// Comandos (ou modos de operação) que o programa pode ser executado.
 pub trait BackyCommand {
     /// Executa um comando
-    fn execute(&self, config: Config) -> BackyResult;
+    fn execute(&self, config: Config) -> BackyResult<()>;
 }
 
 /// Cria e devolve o comando correspondente à lista argumentos
-pub fn from_args(args: &[String]) -> Result<Box<dyn BackyCommand>, Box<dyn BackyError>> {
+pub fn from_args(args: &[String]) -> BackyResult<Box<dyn BackyCommand>> {
     if args.len() <= 1 {
         return Err(Box::new(ErrNoCommand));
     }

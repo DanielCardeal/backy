@@ -17,4 +17,4 @@ pub trait BackyError {
 
 /// Type alias para simplificar a devolução de possíveis erros de execução no
 /// programa
-pub type BackyResult = Result<(), Box<dyn BackyError>>;
+pub type BackyResult<T> = Result<T, Box<dyn BackyError>>;

@@ -15,7 +15,7 @@ use std::{fs, io, os::unix::fs::symlink, path::PathBuf, process};
 // #######################
 pub struct CmdUpdate;
 impl BackyCommand for CmdUpdate {
-    fn execute(&self, config: Config) -> BackyResult {
+    fn execute(&self, config: Config) -> BackyResult<()> {
         if !user_has_rsync() {
             return Err(Box::new(ErrNoRsync));
         }
@@ -54,7 +54,7 @@ impl BackyCommand for CmdUpdate {
 //   Definições privadas
 // #######################
 /// Cria um diretório para o backup.
-fn create_backup_dir(archive_path: &PathBuf) -> Result<PathBuf, Box<dyn BackyError>> {
+fn create_backup_dir(archive_path: &PathBuf) -> BackyResult<PathBuf> {
     let today = Utc::today().format("%Y%m%d/").to_string();
     let mut backup_dir = archive_path.clone();
     backup_dir.push(&today);
@@ -65,7 +65,7 @@ fn create_backup_dir(archive_path: &PathBuf) -> Result<PathBuf, Box<dyn BackyErr
 }
 
 /// Gera a string que representa o diretório base do backup
-fn gen_backup_root_str(backup_root: &PathBuf) -> Result<String, Box<dyn BackyError>> {
+fn gen_backup_root_str(backup_root: &PathBuf) -> BackyResult<String> {
     let mut backup_root = backup_root.clone();
     if !backup_root.is_dir() {
         return Err(Box::new(ErrBackupRootNotDir));
@@ -82,7 +82,7 @@ fn create_named_backup(
     latest_link: &PathBuf,
     name: &String,
     desc: &BackupDescription,
-) -> BackyResult {
+) -> BackyResult<()> {
     let backup_root_str = gen_backup_root_str(&desc.backup_root)?;
     let mut latest_link = latest_link.clone();
     latest_link.push(name);
