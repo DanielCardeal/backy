@@ -29,26 +29,26 @@ impl BackyCommand for CmdUpdate {
         let latest_link = format!("{}/latest", &config.archive_path);
         let latest_arg = format!("--link-dest={}", latest_link);
 
-        // Faz o backup dos backups, excluíndo arquivos caso necessário
-        info!("Backing up '{}'.", &backup_root_str);
+        // Cria o comando de backup dos arquivos selecionados
+        let mut rsync_command = process::Command::new("rsync");
+        rsync_command
+            .current_dir(&backup_dir)
+            .arg(&backup_root_str)
+            .args([
+                "-az",
+                "--delete",
+                &latest_arg,
+            ])
+            .arg(".");
+
         if let Some(exclude_files) = &config.exclude_files {
             let exclude_arg = gen_exclude_arg(&exclude_files);
-            process::Command::new("rsync")
-                .current_dir(&backup_dir)
-                .arg(&backup_root_str)
-                .args(["-az", "--delete", "--copy-links", &latest_arg])
-                .args(&exclude_arg)
-                .arg(".")
-                .status()
-                .unwrap();
-        } else {
-            process::Command::new("rsync")
-                .current_dir(&backup_dir)
-                .arg(&backup_root_str)
-                .args(["-az", "--delete", "--copy-links", &latest_arg])
-                .arg(".")
-                .status()
-                .unwrap();
+            rsync_command.args(exclude_arg);
+        }
+
+        // Executa o backup
+        info!("Backing up '{}'.", &backup_root_str);
+        let rsync_status = rsync_command.status().unwrap();
         }
 
         // Recria o link simbólico para latest
