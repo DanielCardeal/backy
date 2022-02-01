@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     /// Local do disco onde devem ser armazenados os backups incrementais.
-    pub archive_path: String,
+    pub archive_path: PathBuf,
     /// Número máximo de dias que um backup deve armazenado pelo programa.
     pub remove_older_than: i64,
     /// Nome do remote que deve ser usado pelo rclone para sincronizar os arquivos

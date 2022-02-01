@@ -21,7 +21,7 @@ impl BackyCommand for CmdUpdate {
         }
         // Cria o diretório do backup de hoje
         let backup_dir = create_backup_dir(&config.archive_path)?;
-        let mut latest_link = PathBuf::from(&config.archive_path);
+        let mut latest_link = config.archive_path.clone();
         latest_link.push("latest");
 
         for (name, desc) in &config.backups {
@@ -69,9 +69,9 @@ impl BackyCommand for CmdUpdate {
 //   Definições privadas
 // #######################
 /// Cria um diretório para o backup.
-fn create_backup_dir(archive_path: &str) -> Result<PathBuf, Box<dyn BackyError>> {
+fn create_backup_dir(archive_path: &PathBuf) -> Result<PathBuf, Box<dyn BackyError>> {
     let today = Utc::today().format("%Y%m%d/").to_string();
-    let mut backup_dir = PathBuf::from(archive_path);
+    let mut backup_dir = archive_path.clone();
     backup_dir.push(&today);
     match fs::create_dir_all(&backup_dir) {
         Err(err) => Err(Box::new(ErrArchiveCreationFailed { err })),
