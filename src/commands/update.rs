@@ -19,45 +19,46 @@ impl BackyCommand for CmdUpdate {
         if !user_has_rsync() {
             return Err(Box::new(ErrNoRsync));
         }
-        if let None = &config.backup_root {
-            return Err(Box::new(ErrNoBackupRoot));
-        }
-        let backup_root_str = gen_backup_root_str(&config.backup_root.unwrap())?;
-
         // Cria o diretório do backup de hoje
         let backup_dir = create_backup_dir(&config.archive_path)?;
-        let latest_link = format!("{}/latest", &config.archive_path);
-        let latest_arg = format!("--link-dest={}", latest_link);
+        let mut latest_link = PathBuf::from(&config.archive_path);
+        latest_link.push("latest");
 
-        // Cria o comando de backup dos arquivos selecionados
-        let mut rsync_command = process::Command::new("rsync");
-        rsync_command
-            .current_dir(&backup_dir)
-            .arg(&backup_root_str)
-            .args([
-                "-az",
-                "--delete",
-                &latest_arg,
-            ])
-            .arg(".");
+        for (name, desc) in &config.backups {
+            let backup_root_str = gen_backup_root_str(&desc.backup_root)?;
+            let mut latest_link = latest_link.clone();
+            latest_link.push(name);
 
-        if let Some(exclude_files) = &config.exclude_files {
-            let exclude_arg = gen_exclude_arg(&exclude_files);
-            rsync_command.args(exclude_arg);
-        }
+            // Cria o comando `rsync` para o backup dos arquivos selecionados
+            let mut rsync_command = process::Command::new("rsync");
+            rsync_command
+                .current_dir(&backup_dir)
+                .arg(&backup_root_str)
+                .args(["-az", "--delete"])
+                .arg("--link-dest")
+                .arg(latest_link)
+                .arg(&name);
 
-        // Executa o backup
-        info!("Backing up '{}'.", &backup_root_str);
-        let rsync_status = rsync_command.status().unwrap();
-        if !rsync_status.success() {
-            return Err(Box::new(ErrRsyncFail));
+            if let Some(exclude_files) = &desc.exclude_files {
+                let exclude_arg = gen_exclude_arg(&exclude_files);
+                rsync_command.args(exclude_arg);
+            }
+
+            // Executa o backup
+            info!("Creating '{}' backup.", &name);
+            let rsync_status = rsync_command.status().unwrap();
+            if !rsync_status.success() {
+                return Err(Box::new(ErrRsyncFail));
+            }
         }
 
         // Recria o link simbólico para latest
         info!("Updating `latest` link.");
-        fs::remove_file(&latest_link).ok();
+        if let Err(err) = fs::remove_file(&latest_link) {
+            return Err(Box::new(ErrLatestUpdate { err }));
+        }
         if let Err(err) = symlink(&backup_dir, &latest_link) {
-            return Err(Box::new(ErrSymCreationFailed { err }));
+            return Err(Box::new(ErrLatestUpdate { err }));
         };
 
         Ok(())
@@ -103,15 +104,6 @@ fn gen_exclude_arg<'a>(exclude_files: &'a [String]) -> Vec<&'a str> {
 // #######################
 //         Erros
 // #######################
-/// Erro lançado quando não foi possível inferir/não foi fornecido um diretório
-/// base para o backup
-struct ErrNoBackupRoot;
-impl BackyError for ErrNoBackupRoot {
-    fn get_err_msg(&self) -> String {
-        "unable to infer a root for the backup. Please set the value `backup_root` on your config file.".into()
-    }
-}
-
 /// Erro lançado quando o diretório base do backup não é um diretório
 struct ErrBackupRootNotDir;
 impl BackyError for ErrBackupRootNotDir {
@@ -132,12 +124,12 @@ impl BackyError for ErrArchiveCreationFailed {
 
 /// Erro lançado quando não é possível criar o link simbólico para o backup mais
 /// atual
-struct ErrSymCreationFailed {
+struct ErrLatestUpdate {
     err: io::Error,
 }
-impl BackyError for ErrSymCreationFailed {
+impl BackyError for ErrLatestUpdate {
     fn get_err_msg(&self) -> String {
-        format!("unable to create `latest` symlink:\n{}", self.err)
+        format!("unable to update `latest` symlink:\n{}", self.err)
     }
 }
 
