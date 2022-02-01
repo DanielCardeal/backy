@@ -71,7 +71,7 @@ fn create_backup_dir(archive_path: &str) -> Result<PathBuf, Box<dyn BackyError>>
     let mut backup_dir = PathBuf::from(archive_path);
     backup_dir.push(&today);
     match fs::create_dir_all(&backup_dir) {
-        Err(err) => Err(Box::new(ErrSymCreationFailed { err })),
+        Err(err) => Err(Box::new(ErrArchiveCreationFailed { err })),
         _ => Ok(backup_dir),
     }
 }
@@ -115,6 +115,16 @@ struct ErrBackupRootNotDir;
 impl BackyError for ErrBackupRootNotDir {
     fn get_err_msg(&self) -> String {
         "the backup_root is not a directory.".into()
+    }
+}
+
+/// Erro lançado quando não é possível criar o diretório local de arquivos de backup
+struct ErrArchiveCreationFailed {
+    err: io::Error,
+}
+impl BackyError for ErrArchiveCreationFailed {
+    fn get_err_msg(&self) -> String {
+        format!("unable to create backup archive directory:\n{}", &self.err)
     }
 }
 
