@@ -73,7 +73,7 @@ struct ErrBadCommand {
 }
 impl BackyError for ErrBadCommand {
     fn get_err_msg(&self) -> String {
-        format!("command '{}' doesn't exist", self.cmd).into()
+        format!("command '{}' doesn't exist", self.cmd)
     }
 }
 

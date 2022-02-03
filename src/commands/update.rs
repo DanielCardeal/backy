@@ -8,7 +8,14 @@ use crate::{
     logging::{info, log},
 };
 
-use std::{fs, io, os::unix::fs::symlink, path::PathBuf, process, sync::Arc, thread};
+use std::{
+    fs, io,
+    os::unix::fs::symlink,
+    path::{Path, PathBuf},
+    process,
+    sync::Arc,
+    thread,
+};
 
 // #######################
 //   Definições públicas
@@ -58,9 +65,9 @@ impl BackyCommand for CmdUpdate {
 //   Definições privadas
 // #######################
 /// Cria um diretório para o backup.
-fn create_backup_dir(archive_path: &PathBuf) -> BackyResult<PathBuf> {
+fn create_backup_dir(archive_path: &Path) -> BackyResult<PathBuf> {
     let today = Utc::today().format("%Y%m%d/").to_string();
-    let mut backup_dir = archive_path.clone();
+    let mut backup_dir = archive_path.to_owned();
     backup_dir.push(&today);
     match fs::create_dir_all(&backup_dir) {
         Err(err) => Err(Box::new(ErrArchiveCreationFailed { err })),
@@ -69,8 +76,8 @@ fn create_backup_dir(archive_path: &PathBuf) -> BackyResult<PathBuf> {
 }
 
 /// Gera a string que representa o diretório base do backup
-fn gen_backup_root_str(backup_root: &PathBuf) -> BackyResult<String> {
-    let mut backup_root = backup_root.clone();
+fn gen_backup_root_str(backup_root: &Path) -> BackyResult<String> {
+    let mut backup_root = backup_root.to_owned();
     if !backup_root.is_dir() {
         return Err(Box::new(ErrBackupRootNotDir));
     }
@@ -82,13 +89,13 @@ fn gen_backup_root_str(backup_root: &PathBuf) -> BackyResult<String> {
 
 /// Usa o rsync para gerar um backup nomeado na pasta de backups.
 fn create_named_backup(
-    backup_dir: &PathBuf,
-    latest_link: &PathBuf,
-    name: &String,
+    backup_dir: &Path,
+    latest_link: &Path,
+    name: &str,
     desc: &BackupDescription,
 ) -> BackyResult<()> {
     let backup_root_str = gen_backup_root_str(&desc.backup_root)?;
-    let mut latest_link = latest_link.clone();
+    let mut latest_link = latest_link.to_owned();
     latest_link.push(name);
 
     // Cria o comando `rsync` para o backup dos arquivos selecionados
@@ -102,7 +109,7 @@ fn create_named_backup(
         .arg(&name);
 
     if let Some(exclude_files) = &desc.exclude_files {
-        let exclude_arg = gen_exclude_arg(&exclude_files);
+        let exclude_arg = gen_exclude_arg(exclude_files)?;
         rsync_command.args(exclude_arg);
     }
 
@@ -117,13 +124,13 @@ fn create_named_backup(
 }
 
 /// Gera diretivas --exclude para os arquivos passados pelo usuário
-fn gen_exclude_arg<'a>(exclude_files: &'a [String]) -> Vec<&'a str> {
+fn gen_exclude_arg(exclude_files: &[String]) -> BackyResult<Vec<&str>> {
     let mut exclude_arg = Vec::new();
     for file in exclude_files {
         exclude_arg.push("--exclude");
         exclude_arg.push(file);
     }
-    return exclude_arg;
+    Ok(exclude_arg)
 }
 
 // #######################

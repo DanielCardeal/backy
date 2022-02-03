@@ -1,7 +1,7 @@
 use super::BackyCommand;
 use crate::error::BackyResult;
 
-const HELP_MSG: &'static str = "\
+const HELP_MSG: &str = "\
 Backy helps users to manage local and remote backups using the rclone and rsync tools.
 
 USAGE:

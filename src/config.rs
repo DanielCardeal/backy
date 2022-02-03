@@ -57,7 +57,7 @@ fn read_config() -> BackyResult<String> {
     // Lê a config para uma string
     match fs::read_to_string(config_path) {
         Ok(f) => Ok(f),
-        _ => return Err(Box::new(ErrNoConfigFile)),
+        _ => Err(Box::new(ErrNoConfigFile)),
     }
 }
 
